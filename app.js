@@ -41,6 +41,10 @@ function dayKey(date) {
   return date.toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" });
 }
 
+function upcomingDateLabel(date) {
+  return date.toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" }).toUpperCase();
+}
+
 function isTargetTeam(team, feed) {
   const text = `${team.displayName || ""} ${team.shortDisplayName || ""} ${team.name || ""} ${team.abbreviation || ""}`.toLowerCase();
   if (feed.team === "reds") return text.includes("cincinnati reds") || team.abbreviation?.toLowerCase() === "cin";
@@ -99,15 +103,10 @@ function normalizeEvent(event, feed) {
   if (completed) {
     const a = numericScore(targetScore);
     const b = numericScore(opponentScore);
-    if (a !== null && b !== null) {
-      result = a > b ? "W" : a < b ? "L" : "T";
-    } else if (target.winner === true) {
-      result = "W";
-    } else if (opponent.winner === true) {
-      result = "L";
-    } else {
-      result = "—";
-    }
+    if (a !== null && b !== null) result = a > b ? "W" : a < b ? "L" : "T";
+    else if (target.winner === true) result = "W";
+    else if (opponent.winner === true) result = "L";
+    else result = "—";
   }
 
   return {
@@ -150,29 +149,30 @@ async function loadGames() {
 
   const yesterdayKey = dayKey(start);
   const todayKey = dayKey(today);
-  const next = unique.filter(game => game.date > new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59));
+  const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+  const upcoming = unique.filter(game => game.date > endOfToday);
+  const upcomingByDate = new Map();
+  upcoming.forEach(game => {
+    if (!upcomingByDate.has(game.dateKey)) upcomingByDate.set(game.dateKey, []);
+    upcomingByDate.get(game.dateKey).push(game);
+  });
 
   return {
     yesterday: unique.filter(game => game.dateKey === yesterdayKey && game.status === "final"),
     today: unique.filter(game => game.dateKey === todayKey),
-    next,
-    nextLabel: "Next 3 Days"
+    upcomingByDate
   };
 }
 
 function gameRow(game) {
   const team = TEAMS[game.team];
   const logo = team?.logo || "";
-  const label = team?.kind === "college"
-    ? `<span class="sport">${esc(game.sport)}</span>`
-    : "";
+  const label = team?.kind === "college" ? `<span class="sport">${esc(game.sport)}</span>` : "";
 
   let right = esc(game.time || "");
   if (game.status === "final") {
     const cls = game.result === "W" ? "win" : game.result === "L" ? "loss" : "draw";
-    const scoreText = game.targetScore && game.opponentScore
-      ? `${game.targetScore}–${game.opponentScore}`
-      : "Score unavailable";
+    const scoreText = game.targetScore && game.opponentScore ? `${game.targetScore}–${game.opponentScore}` : "Score unavailable";
     right = `<span class="result ${cls}">${esc(game.result)} ${esc(scoreText)}</span>`;
   }
 
@@ -193,12 +193,14 @@ function renderSection(title, games) {
 
 function render(games) {
   const content = document.getElementById("sports");
-  const sections = [
-    renderSection("Yesterday", games.yesterday || []),
-    renderSection("Today", games.today || []),
-    renderSection(games.nextLabel || "Next", games.next || [])
-  ].filter(Boolean);
-  content.innerHTML = sections.length ? sections.join("") : `<div class="empty">No games scheduled.</div>`;
+  const sections = [renderSection("Yesterday", games.yesterday || []), renderSection("Today", games.today || [])];
+
+  for (const [dateKey, dayGames] of games.upcomingByDate) {
+    sections.push(renderSection(upcomingDateLabel(dayGames[0].date), dayGames));
+  }
+
+  const visible = sections.filter(Boolean);
+  content.innerHTML = visible.length ? visible.join("") : `<div class="empty">No games scheduled.</div>`;
   document.getElementById("updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 }
 
