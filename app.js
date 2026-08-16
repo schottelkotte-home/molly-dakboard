@@ -1,16 +1,14 @@
 /*
  * DAKboard Sports
  *
- * The display layer is intentionally separate from the data layer.  The
- * `loadGames()` function below currently uses sample data; the next step is
- * to connect it to the live sports feed and replace the sample data.
+ * Display layer for the sports feed. Live data will be connected separately.
  */
 
 const TEAMS = {
-  reds: { label: "Reds", logo: "logos/reds.svg", kind: "pro" },
-  bengals: { label: "Bengals", logo: "logos/bengals.svg", kind: "pro" },
-  fcc: { label: "FCC", logo: "logos/fcc.svg", kind: "pro" },
-  louisville: { label: "Louisville", logo: "logos/louisville.svg", kind: "college" }
+  reds: { label: "Reds", logo: "logos/Reds.PNG", kind: "pro" },
+  bengals: { label: "Bengals", logo: "logos/Bengals.PNG", kind: "pro" },
+  fcc: { label: "FCC", logo: "logos/FCC.PNG", kind: "pro" },
+  louisville: { label: "Louisville", logo: "logos/Louisville.png", kind: "college" }
 };
 
 const SPORT_LABELS = {
@@ -83,8 +81,7 @@ function render(games) {
 
 async function loadGames() {
   // Live feed will be connected here next.
-  // Sample data is deliberately empty so the production display doesn't
-  // show fabricated scores or schedules.
+  // Keep this empty until real sports data is connected.
   return { yesterday: [], today: [], next: [] };
 }
 
