@@ -54,17 +54,25 @@ function opponentFor(competitors, target) {
 }
 
 function scoreOf(competitor) {
-  // ESPN normally provides `score` as a string. The fallback handles older
-  // responses where only a numeric score or displayValue is exposed.
-  if (competitor?.score !== undefined && competitor?.score !== null && competitor.score !== "") {
-    return String(competitor.score);
+  const raw = competitor?.score;
+  if (raw !== undefined && raw !== null && raw !== "") {
+    if (typeof raw === "object") {
+      if (raw.displayValue !== undefined) return String(raw.displayValue);
+      if (raw.value !== undefined) return String(raw.value);
+    }
+    return String(raw);
   }
   if (competitor?.displayValue !== undefined) return String(competitor.displayValue);
   if (Array.isArray(competitor?.linescores)) {
     const total = competitor.linescores.reduce((sum, period) => sum + Number(period.value || 0), 0);
     if (Number.isFinite(total)) return String(total);
   }
-  return "—";
+  return "";
+}
+
+function numericScore(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 function normalizeEvent(event, feed) {
@@ -89,9 +97,17 @@ function normalizeEvent(event, feed) {
 
   let result = "";
   if (completed) {
-    if (target.winner === true) result = "W";
-    else if (opponent.winner === true) result = "L";
-    else result = "T";
+    const a = numericScore(targetScore);
+    const b = numericScore(opponentScore);
+    if (a !== null && b !== null) {
+      result = a > b ? "W" : a < b ? "L" : "T";
+    } else if (target.winner === true) {
+      result = "W";
+    } else if (opponent.winner === true) {
+      result = "L";
+    } else {
+      result = "—";
+    }
   }
 
   return {
@@ -106,7 +122,7 @@ function normalizeEvent(event, feed) {
     result,
     targetScore,
     opponentScore,
-    score: completed ? `${targetScore}–${opponentScore}` : "",
+    score: completed && targetScore && opponentScore ? `${targetScore}–${opponentScore}` : "",
     time: postponed ? (type.name === "STATUS_CANCELED" ? "Canceled" : "Postponed") : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
   };
 }
@@ -154,7 +170,10 @@ function gameRow(game) {
   let right = esc(game.time || "");
   if (game.status === "final") {
     const cls = game.result === "W" ? "win" : game.result === "L" ? "loss" : "draw";
-    right = `<span class="result ${cls}">${esc(game.result)} ${esc(game.targetScore)}–${esc(game.opponentScore)}</span>`;
+    const scoreText = game.targetScore && game.opponentScore
+      ? `${game.targetScore}–${game.opponentScore}`
+      : "Score unavailable";
+    right = `<span class="result ${cls}">${esc(game.result)} ${esc(scoreText)}</span>`;
   }
 
   return `<article class="game">
