@@ -7,10 +7,11 @@ const TEAMS = {
   louisville: { label: "Louisville", logo: "logos/Louisville.png", kind: "college" }
 };
 
+// ESPN team IDs. These are IDs for the actual teams, not league IDs.
 const FEEDS = [
-  { team: "reds", sport: "baseball", league: "mlb", id: "113", label: "" },
+  { team: "reds", sport: "baseball", league: "mlb", id: "17", label: "" },
   { team: "bengals", sport: "football", league: "nfl", id: "4", label: "" },
-  { team: "fcc", sport: "soccer", league: "usa.1", id: "182", label: "" },
+  { team: "fcc", sport: "soccer", league: "usa.1", id: "18267", label: "" },
   { team: "louisville", sport: "football", league: "college-football", id: "97", label: "Football" },
   { team: "louisville", sport: "basketball", league: "mens-college-basketball", id: "97", label: "MBB" },
   { team: "louisville", sport: "basketball", league: "womens-college-basketball", id: "97", label: "WBB" },
@@ -73,8 +74,8 @@ function normalizeEvent(event, feed) {
   const target = competitors.find(c => String(c.team?.id) === String(feed.id));
   if (!target) return null;
 
-  const opponent = competitors.find(c => c !== target)?.team || {};
   const opponentEntry = competitors.find(c => c !== target);
+  const opponent = opponentEntry?.team || {};
   const status = competition.status || event.status || {};
   const type = status.type || {};
   const completed = Boolean(type.completed);
