@@ -7,8 +7,6 @@ const TEAMS = {
   louisville: { label: "Louisville", logo: "logos/Louisville.png", kind: "college" }
 };
 
-// ESPN's public scoreboard endpoints. We query a short date range, then keep
-// only the teams below. The endpoint structure is documented by the community.
 const FEEDS = [
   { team: "reds", sport: "baseball", league: "mlb", key: "pro" },
   { team: "bengals", sport: "football", league: "nfl", key: "pro" },
@@ -47,12 +45,26 @@ function isTargetTeam(team, feed) {
   const text = `${team.displayName || ""} ${team.shortDisplayName || ""} ${team.name || ""} ${team.abbreviation || ""}`.toLowerCase();
   if (feed.team === "reds") return text.includes("cincinnati reds") || team.abbreviation?.toLowerCase() === "cin";
   if (feed.team === "bengals") return text.includes("cincinnati bengals") || team.abbreviation?.toLowerCase() === "cin";
-  if (feed.team === "fcc") return text.includes("fc cincinnati") || text.includes("cincinnati") && text.includes("fc");
+  if (feed.team === "fcc") return text.includes("fc cincinnati") || (text.includes("cincinnati") && text.includes("fc"));
   return text.includes("louisville") || text.includes("cardinals");
 }
 
 function opponentFor(competitors, target) {
   return competitors.find(c => c !== target)?.team || {};
+}
+
+function scoreOf(competitor) {
+  // ESPN normally provides `score` as a string. The fallback handles older
+  // responses where only a numeric score or displayValue is exposed.
+  if (competitor?.score !== undefined && competitor?.score !== null && competitor.score !== "") {
+    return String(competitor.score);
+  }
+  if (competitor?.displayValue !== undefined) return String(competitor.displayValue);
+  if (Array.isArray(competitor?.linescores)) {
+    const total = competitor.linescores.reduce((sum, period) => sum + Number(period.value || 0), 0);
+    if (Number.isFinite(total)) return String(total);
+  }
+  return "—";
 }
 
 function normalizeEvent(event, feed) {
@@ -72,8 +84,8 @@ function normalizeEvent(event, feed) {
 
   const home = target.homeAway === "home";
   const opponentName = opponent.shortDisplayName || opponent.displayName || opponent.name || "Opponent";
-  const targetScore = target.score ?? "";
-  const opponentScore = opponent.score ?? "";
+  const targetScore = scoreOf(target);
+  const opponentScore = scoreOf(opponent);
 
   let result = "";
   if (completed) {
@@ -92,7 +104,9 @@ function normalizeEvent(event, feed) {
     dateKey: dayKey(date),
     status: completed ? "final" : postponed ? "postponed" : "scheduled",
     result,
-    score: completed ? `${targetScore}-${opponentScore}` : "",
+    targetScore,
+    opponentScore,
+    score: completed ? `${targetScore}–${opponentScore}` : "",
     time: postponed ? (type.name === "STATUS_CANCELED" ? "Canceled" : "Postponed") : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
   };
 }
@@ -115,8 +129,6 @@ async function loadGames() {
 
   const results = await Promise.allSettled(FEEDS.map(feed => fetchFeed(feed, start, end)));
   const games = results.flatMap(result => result.status === "fulfilled" ? result.value : []);
-
-  // De-duplicate games in case ESPN returns the same event through overlapping feeds.
   const unique = [...new Map(games.map(game => [game.id, game])).values()];
   unique.sort((a, b) => a.date - b.date);
 
@@ -142,7 +154,7 @@ function gameRow(game) {
   let right = esc(game.time || "");
   if (game.status === "final") {
     const cls = game.result === "W" ? "win" : game.result === "L" ? "loss" : "draw";
-    right = `<span class="result ${cls}">${esc(game.result)} ${esc(game.score)}</span>`;
+    right = `<span class="result ${cls}">${esc(game.result)} ${esc(game.targetScore)}–${esc(game.opponentScore)}</span>`;
   }
 
   return `<article class="game">
