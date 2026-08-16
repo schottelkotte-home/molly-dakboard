@@ -52,7 +52,7 @@ h1 {
 
 .game {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 48px minmax(0, 1fr) minmax(72px, auto);
   gap: 10px;
   align-items: center;
   min-height: 54px;
@@ -78,7 +78,13 @@ h1 {
 .sport { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .opponent { margin-top: 1px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.result, .time { text-align: right; white-space: nowrap; font-weight: 800; font-size: 14px; }
+.result, .time {
+  min-width: 72px;
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 14px;
+}
 .win { color: var(--win); }
 .loss { color: var(--loss); }
 .draw { color: var(--muted); }
@@ -88,8 +94,9 @@ h1 {
 
 @media (max-width: 600px) {
   .sports-board { padding: 16px; }
-  .game { grid-template-columns: 40px minmax(0,1fr) auto; }
+  .game { grid-template-columns: 40px minmax(0,1fr) minmax(70px,auto); gap: 8px; }
   .logo { width: 32px; height: 32px; }
   .team-name { font-size: 13px; }
   .opponent { font-size: 12px; }
+  .result, .time { min-width: 70px; font-size: 13px; }
 }
