@@ -1,45 +1,30 @@
-:root {
-  --text: #252525;
-  --muted: #777;
-  --line: #e5e5e5;
-  --win: #287a45;
-  --loss: #a33a3a;
-  --surface: #ffffff;
-}
-
-* { box-sizing: border-box; }
-html, body { margin: 0; width: 100%; min-height: 100%; }
-body { background: transparent; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-
-.sports-board { width: 100%; padding: 22px 26px; background: var(--surface); border-radius: 14px; }
-.board-header { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--text); padding-bottom: 8px; margin-bottom: 10px; }
-h1 { margin: 0; font-size: clamp(24px, 2.2vw, 40px); line-height: 1; text-transform: uppercase; letter-spacing: .08em; }
-.updated { color: var(--muted); font-size: 12px; }
-.day { margin-top: 18px; }
-.day-title { margin: 0 0 8px; padding-top: 8px; border-top: 2px solid var(--text); font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-
-.game { display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(90px, auto); gap: 10px; align-items: center; min-height: 54px; border-bottom: 0; }
-.logo { width: 48px; height: 48px; display: grid; place-items: center; font-weight: 900; font-size: 18px; overflow: hidden; }
-.logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.logo-fallback { border-radius: 50%; border: 1px solid var(--line); }
-.details { min-width: 0; }
-.team-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.team-name { font-weight: 800; font-size: 22px; text-transform: uppercase; letter-spacing: .02em; }
-.sport { color: var(--muted); font-size: 16px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.opponent { margin-top: 1px; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.result, .time { min-width: 90px; text-align: right; white-space: nowrap; font-weight: 800; font-size: 20px; }
-.win { color: var(--win); }
-.loss { color: var(--loss); }
-.draw { color: var(--muted); }
-.empty { color: var(--muted); padding: 14px 0; font-size: 13px; }
-.error { color: var(--loss); font-size: 13px; padding: 12px 0; }
-
-@media (max-width: 600px) {
-  .sports-board { padding: 16px; }
-  .game { grid-template-columns: 48px minmax(0,1fr) minmax(82px,auto); gap: 8px; }
-  .logo { width: 40px; height: 40px; }
-  .team-name { font-size: 18px; }
-  .sport { font-size: 14px; }
-  .opponent { font-size: 16px; }
-  .result, .time { min-width: 82px; font-size: 18px; }
+:root { --text:#252525; --muted:#777; --line:#e5e5e5; --win:#287a45; --loss:#a33a3a; --surface:#fff; }
+* { box-sizing:border-box; }
+html,body { margin:0; width:100%; min-height:100%; }
+body { background:transparent; color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+.sports-board { width:100%; padding:22px 26px; background:var(--surface); border-radius:14px; }
+.board-header { display:flex; align-items:baseline; justify-content:space-between; border-bottom:2px solid var(--text); padding-bottom:8px; margin-bottom:10px; }
+h1 { margin:0; font-size:clamp(24px,2.2vw,40px); line-height:1; text-transform:uppercase; letter-spacing:.08em; }
+.updated { color:var(--muted); font-size:12px; }
+.day { margin-top:18px; }
+.day-title { margin:0 0 8px; padding-top:8px; border-top:2px solid var(--text); font-size:36px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.game { display:grid; grid-template-columns:72px minmax(0,1fr) minmax(150px,auto); gap:14px; align-items:center; min-height:68px; }
+.logo { width:60px; height:60px; display:grid; place-items:center; overflow:hidden; }
+.logo img { max-width:100%; max-height:100%; object-fit:contain; }
+.details { min-width:0; }
+.team-line { display:flex; align-items:baseline; gap:12px; min-width:0; flex-wrap:nowrap; }
+.team-name { font-weight:800; font-size:44px; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; }
+.sport { color:var(--muted); font-size:32px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; }
+.opponent-inline { font-size:36px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.result,.time { min-width:150px; text-align:right; white-space:nowrap; font-weight:800; font-size:40px; }
+.win { color:var(--win); } .loss { color:var(--loss); } .draw { color:var(--muted); }
+.empty { color:var(--muted); padding:14px 0; font-size:20px; }
+.error { color:var(--loss); font-size:16px; padding:12px 0; }
+@media (max-width:600px) {
+  .sports-board { padding:16px; }
+  .game { grid-template-columns:52px minmax(0,1fr) minmax(100px,auto); gap:8px; }
+  .logo { width:44px; height:44px; }
+  .day-title { font-size:24px; }
+  .team-name { font-size:28px; } .sport { font-size:20px; } .opponent-inline { font-size:23px; }
+  .result,.time { min-width:100px; font-size:25px; }
 }
