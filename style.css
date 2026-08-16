@@ -40,9 +40,11 @@ h1 {
 }
 
 .updated { color: var(--muted); font-size: 12px; }
-.day { margin-top: 14px; }
+.day { margin-top: 18px; }
 .day-title {
-  margin: 0 0 5px;
+  margin: 0 0 8px;
+  padding-top: 8px;
+  border-top: 2px solid var(--text);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .12em;
@@ -56,9 +58,8 @@ h1 {
   gap: 10px;
   align-items: center;
   min-height: 54px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 0;
 }
-.game:last-child { border-bottom: 0; }
 
 .logo {
   width: 38px;
