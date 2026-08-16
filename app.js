@@ -7,8 +7,6 @@ const TEAMS = {
   louisville: { label: "Louisville", logo: "logos/Louisville.png", kind: "college" }
 };
 
-// ESPN team IDs. Team schedule endpoints are more reliable than broad league
-// scoreboards for college sports, especially Louisville's non-revenue sports.
 const FEEDS = [
   { team: "reds", sport: "baseball", league: "mlb", id: "113", label: "" },
   { team: "bengals", sport: "football", league: "nfl", id: "4", label: "" },
@@ -76,6 +74,7 @@ function normalizeEvent(event, feed) {
   if (!target) return null;
 
   const opponent = competitors.find(c => c !== target)?.team || {};
+  const opponentEntry = competitors.find(c => c !== target);
   const status = competition.status || event.status || {};
   const type = status.type || {};
   const completed = Boolean(type.completed);
@@ -85,13 +84,13 @@ function normalizeEvent(event, feed) {
   if (Number.isNaN(date.getTime())) return null;
 
   const targetScore = scoreOf(target);
-  const opponentScore = scoreOf(competitors.find(c => c !== target));
+  const opponentScore = scoreOf(opponentEntry);
   const a = numericScore(targetScore);
   const b = numericScore(opponentScore);
   let result = "";
   if (completed && a !== null && b !== null) result = a > b ? "W" : a < b ? "L" : "T";
   else if (completed && target.winner === true) result = "W";
-  else if (completed && competitors.find(c => c !== target)?.winner === true) result = "L";
+  else if (completed && opponentEntry?.winner === true) result = "L";
 
   return {
     id: `${feed.team}-${feed.sport}-${event.id}`,
@@ -121,10 +120,8 @@ async function fetchFeed(feed, start, end) {
 async function loadGames() {
   feedErrors.length = 0;
   const today = new Date();
-  const start = new Date(today);
-  start.setDate(start.getDate() - 1);
-  const end = new Date(today);
-  end.setDate(end.getDate() + 3);
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 23, 59, 59, 999);
 
   const results = await Promise.all(FEEDS.map(async feed => {
     try {
@@ -135,7 +132,7 @@ async function loadGames() {
     }
   }));
 
-  const games = results.flat();
+  const games = results.flat().filter(game => game.date >= start && game.date <= end);
   const unique = [...new Map(games.map(game => [game.id, game])).values()];
   unique.sort((a, b) => a.date - b.date);
 
@@ -179,7 +176,7 @@ function render(games) {
   for (const [, dayGames] of games.upcomingByDate) sections.push(renderSection(upcomingDateLabel(dayGames[0].date), dayGames));
 
   if (feedErrors.length) {
-    sections.push(`<section class="day"><h2 class="day-title">Feed diagnostics</h2><div class="error">${feedErrors.map(esc).join("<br>")}</div></section>`);
+    sections.push(`<section class="day diagnostics"><h2 class="day-title">Feed diagnostics</h2><div class="error">${feedErrors.map(esc).join("<br>")}</div></section>`);
   }
 
   const visible = sections.filter(Boolean);
