@@ -7,19 +7,23 @@ const TEAMS = {
   louisville: { label: "Louisville", logo: "logos/Louisville.png", kind: "college" }
 };
 
+// ESPN team IDs. Team schedule endpoints are more reliable than broad league
+// scoreboards for college sports, especially Louisville's non-revenue sports.
 const FEEDS = [
-  { team: "reds", sport: "baseball", league: "mlb", key: "pro" },
-  { team: "bengals", sport: "football", league: "nfl", key: "pro" },
-  { team: "fcc", sport: "soccer", league: "usa.1", key: "pro" },
-  { team: "louisville", sport: "football", league: "college-football", label: "Football" },
-  { team: "louisville", sport: "basketball", league: "mens-college-basketball", label: "MBB" },
-  { team: "louisville", sport: "basketball", league: "womens-college-basketball", label: "WBB" },
-  { team: "louisville", sport: "volleyball", league: "womens-college-volleyball", label: "Volleyball" },
-  { team: "louisville", sport: "baseball", league: "college-baseball", label: "Baseball" },
-  { team: "louisville", sport: "baseball", league: "college-softball", label: "Softball" },
-  { team: "louisville", sport: "soccer", league: "usa.ncaa.m.1", label: "Men's Soccer" },
-  { team: "louisville", sport: "soccer", league: "usa.ncaa.w.1", label: "Women's Soccer" }
+  { team: "reds", sport: "baseball", league: "mlb", id: "113", label: "" },
+  { team: "bengals", sport: "football", league: "nfl", id: "4", label: "" },
+  { team: "fcc", sport: "soccer", league: "usa.1", id: "182", label: "" },
+  { team: "louisville", sport: "football", league: "college-football", id: "97", label: "Football" },
+  { team: "louisville", sport: "basketball", league: "mens-college-basketball", id: "97", label: "MBB" },
+  { team: "louisville", sport: "basketball", league: "womens-college-basketball", id: "97", label: "WBB" },
+  { team: "louisville", sport: "volleyball", league: "womens-college-volleyball", id: "97", label: "Volleyball" },
+  { team: "louisville", sport: "baseball", league: "college-baseball", id: "97", label: "Baseball" },
+  { team: "louisville", sport: "softball", league: "college-softball", id: "97", label: "Softball" },
+  { team: "louisville", sport: "soccer", league: "mens-college-soccer", id: "97", label: "Men's Soccer" },
+  { team: "louisville", sport: "soccer", league: "womens-college-soccer", id: "97", label: "Women's Soccer" }
 ];
+
+const feedErrors = [];
 
 function esc(value) {
   return String(value ?? "")
@@ -38,23 +42,11 @@ function localDateKey(date) {
 }
 
 function dayKey(date) {
-  return date.toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" });
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function upcomingDateLabel(date) {
   return date.toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" }).toUpperCase();
-}
-
-function isTargetTeam(team, feed) {
-  const text = `${team.displayName || ""} ${team.shortDisplayName || ""} ${team.name || ""} ${team.abbreviation || ""}`.toLowerCase();
-  if (feed.team === "reds") return text.includes("cincinnati reds") || team.abbreviation?.toLowerCase() === "cin";
-  if (feed.team === "bengals") return text.includes("cincinnati bengals") || team.abbreviation?.toLowerCase() === "cin";
-  if (feed.team === "fcc") return text.includes("fc cincinnati") || (text.includes("cincinnati") && text.includes("fc"));
-  return text.includes("louisville") || text.includes("cardinals");
-}
-
-function opponentFor(competitors, target) {
-  return competitors.find(c => c !== target)?.team || {};
 }
 
 function scoreOf(competitor) {
@@ -67,14 +59,11 @@ function scoreOf(competitor) {
     return String(raw);
   }
   if (competitor?.displayValue !== undefined) return String(competitor.displayValue);
-  if (Array.isArray(competitor?.linescores)) {
-    const total = competitor.linescores.reduce((sum, period) => sum + Number(period.value || 0), 0);
-    if (Number.isFinite(total)) return String(total);
-  }
   return "";
 }
 
 function numericScore(value) {
+  if (value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -83,67 +72,70 @@ function normalizeEvent(event, feed) {
   const competition = event.competitions?.[0];
   if (!competition) return null;
   const competitors = competition.competitors || [];
-  const target = competitors.find(c => isTargetTeam(c.team || {}, feed));
+  const target = competitors.find(c => String(c.team?.id) === String(feed.id));
   if (!target) return null;
 
-  const opponent = opponentFor(competitors, target);
+  const opponent = competitors.find(c => c !== target)?.team || {};
   const status = competition.status || event.status || {};
   const type = status.type || {};
   const completed = Boolean(type.completed);
-  const postponed = Boolean(type.name === "STATUS_POSTPONED" || type.name === "STATUS_CANCELED");
+  const canceled = type.name === "STATUS_CANCELED";
+  const postponed = type.name === "STATUS_POSTPONED";
   const date = new Date(event.date || competition.date);
   if (Number.isNaN(date.getTime())) return null;
 
-  const home = target.homeAway === "home";
-  const opponentName = opponent.shortDisplayName || opponent.displayName || opponent.name || "Opponent";
   const targetScore = scoreOf(target);
-  const opponentScore = scoreOf(opponent);
-
+  const opponentScore = scoreOf(competitors.find(c => c !== target));
+  const a = numericScore(targetScore);
+  const b = numericScore(opponentScore);
   let result = "";
-  if (completed) {
-    const a = numericScore(targetScore);
-    const b = numericScore(opponentScore);
-    if (a !== null && b !== null) result = a > b ? "W" : a < b ? "L" : "T";
-    else if (target.winner === true) result = "W";
-    else if (opponent.winner === true) result = "L";
-    else result = "—";
-  }
+  if (completed && a !== null && b !== null) result = a > b ? "W" : a < b ? "L" : "T";
+  else if (completed && target.winner === true) result = "W";
+  else if (completed && competitors.find(c => c !== target)?.winner === true) result = "L";
 
   return {
-    id: event.id,
+    id: `${feed.team}-${feed.sport}-${event.id}`,
     team: feed.team,
     sport: feed.label || "",
-    opponent: opponentName,
-    home,
+    opponent: opponent.shortDisplayName || opponent.displayName || opponent.name || "Opponent",
+    home: target.homeAway === "home",
     date,
     dateKey: dayKey(date),
-    status: completed ? "final" : postponed ? "postponed" : "scheduled",
+    status: completed ? "final" : canceled ? "canceled" : postponed ? "postponed" : "scheduled",
     result,
     targetScore,
     opponentScore,
-    score: completed && targetScore && opponentScore ? `${targetScore}–${opponentScore}` : "",
-    time: postponed ? (type.name === "STATUS_CANCELED" ? "Canceled" : "Postponed") : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    time: canceled ? "Canceled" : postponed ? "Postponed" : completed ? "Final" : date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
   };
 }
 
 async function fetchFeed(feed, start, end) {
-  const base = `https://site.api.espn.com/apis/site/v2/sports/${feed.sport}/${feed.league}/scoreboard`;
+  const base = `https://site.api.espn.com/apis/site/v2/sports/${feed.sport}/${feed.league}/teams/${feed.id}/schedule`;
   const url = `${base}?dates=${localDateKey(start)}-${localDateKey(end)}`;
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`${feed.league}: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const data = await response.json();
   return (data.events || []).map(event => normalizeEvent(event, feed)).filter(Boolean);
 }
 
 async function loadGames() {
+  feedErrors.length = 0;
   const today = new Date();
   const start = new Date(today);
   start.setDate(start.getDate() - 1);
   const end = new Date(today);
   end.setDate(end.getDate() + 3);
 
-  const results = await Promise.allSettled(FEEDS.map(feed => fetchFeed(feed, start, end)));
-  const games = results.flatMap(result => result.status === "fulfilled" ? result.value : []);
+  const results = await Promise.all(FEEDS.map(async feed => {
+    try {
+      return await fetchFeed(feed, start, end);
+    } catch (error) {
+      feedErrors.push(`${feed.team}/${feed.label || feed.sport}: ${error.message}`);
+      return [];
+    }
+  }));
+
+  const games = results.flat();
   const unique = [...new Map(games.map(game => [game.id, game])).values()];
   unique.sort((a, b) => a.date - b.date);
 
@@ -166,24 +158,14 @@ async function loadGames() {
 
 function gameRow(game) {
   const team = TEAMS[game.team];
-  const logo = team?.logo || "";
   const label = team?.kind === "college" ? `<span class="sport">${esc(game.sport)}</span>` : "";
-
   let right = esc(game.time || "");
   if (game.status === "final") {
     const cls = game.result === "W" ? "win" : game.result === "L" ? "loss" : "draw";
-    const scoreText = game.targetScore && game.opponentScore ? `${game.targetScore}–${game.opponentScore}` : "Score unavailable";
-    right = `<span class="result ${cls}">${esc(game.result)} ${esc(scoreText)}</span>`;
+    const scoreText = game.targetScore !== "" && game.opponentScore !== "" ? `${game.targetScore}–${game.opponentScore}` : "Score unavailable";
+    right = `<span class="result ${cls}">${esc(game.result || "FINAL")} ${esc(scoreText)}</span>`;
   }
-
-  return `<article class="game">
-    <div class="logo"><img src="${esc(logo)}" alt=""></div>
-    <div class="details">
-      <div class="team-line"><span class="team-name">${esc(team?.label || "")}</span>${label}</div>
-      <div class="opponent">${game.home ? "vs " : "@ "}${esc(game.opponent)}</div>
-    </div>
-    <div class="time">${right}</div>
-  </article>`;
+  return `<article class="game"><div class="logo"><img src="${esc(team?.logo || "")}" alt=""></div><div class="details"><div class="team-line"><span class="team-name">${esc(team?.label || "")}</span>${label}</div><div class="opponent">${game.home ? "vs " : "@ "}${esc(game.opponent)}</div></div><div class="time">${right}</div></article>`;
 }
 
 function renderSection(title, games) {
@@ -194,9 +176,10 @@ function renderSection(title, games) {
 function render(games) {
   const content = document.getElementById("sports");
   const sections = [renderSection("Yesterday", games.yesterday || []), renderSection("Today", games.today || [])];
+  for (const [, dayGames] of games.upcomingByDate) sections.push(renderSection(upcomingDateLabel(dayGames[0].date), dayGames));
 
-  for (const [dateKey, dayGames] of games.upcomingByDate) {
-    sections.push(renderSection(upcomingDateLabel(dayGames[0].date), dayGames));
+  if (feedErrors.length) {
+    sections.push(`<section class="day"><h2 class="day-title">Feed diagnostics</h2><div class="error">${feedErrors.map(esc).join("<br>")}</div></section>`);
   }
 
   const visible = sections.filter(Boolean);
