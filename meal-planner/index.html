@@ -8,7 +8,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f7f7f8;color:#1f2933;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.app{max-width:520px;margin:auto;padding:14px 10px 28px}h1{font-size:22px;margin:2px 0 14px}h2{font-size:16px;margin:18px 0 7px}.week{display:flex;align-items:center;gap:9px;margin-bottom:10px}.week label{font-size:14px;font-weight:600;white-space:nowrap}select{flex:1;min-height:44px;border:1px solid #cfd5dc;border-radius:8px;background:#fff;font-size:16px;padding:8px}.table{width:100%;border:1px solid #dfe3e8;border-radius:9px;overflow:hidden;background:#fff}.row{display:grid;grid-template-columns:54px minmax(0,1fr) minmax(0,1fr)}.row+.row{border-top:1px solid #dfe3e8}.cell{min-width:0;border-right:1px solid #dfe3e8}.cell:last-child{border-right:0}.head .cell{background:#f3f5f7;font-size:12px;font-weight:700;padding:8px 6px}.day{background:#fafbfc;font-size:12px;font-weight:650;padding:10px 6px}.meal{position:relative;min-height:78px;padding-bottom:31px}textarea{display:block;width:100%;min-height:48px;border:0;outline:0;resize:none;overflow:hidden;background:transparent;font:inherit;font-size:16px;line-height:1.3;padding:9px 7px}textarea::placeholder{color:#adb4bd}.copy{position:absolute;left:6px;right:6px;bottom:5px;display:flex;gap:0;min-height:28px;border:1px solid #cfd5dc;border-radius:999px;overflow:hidden;background:#f2f4f6}.copy:empty{display:none}.copy button{flex:1;height:28px;min-width:0;border:0;border-right:1px solid #cfd5dc;border-radius:0;background:transparent;color:#4d5662;font-size:11px;font-weight:700}.copy button:last-child{border-right:0}.small .row{grid-template-columns:54px minmax(0,1fr)}.person{background:#fafbfc;font-size:13px;font-weight:650;padding:11px 8px}.small textarea{min-height:48px}.clear{width:100%;min-height:46px;margin-top:18px;border:1px solid #f0c4bf;border-radius:9px;background:#fff5f4;color:#b42318;font-size:14px;font-weight:700}.status{text-align:center;color:#7b8490;font-size:11px;min-height:16px;margin-top:7px}dialog{width:calc(100% - 32px);max-width:360px;border:0;border-radius:12px;padding:18px}dialog::backdrop{background:rgba(0,0,0,.3)}dialog h3{margin:0 0 6px;font-size:17px}dialog p{font-size:14px;color:#59616c;line-height:1.4;margin:0 0 15px}.dlg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dlg button{min-height:44px;border-radius:8px;font-weight:700;font-size:14px}.cancel{border:1px solid #cfd5dc;background:#fff}.confirm{border:1px solid #b42318;background:#b42318;color:#fff}
 </style>
-</head>
+<script src="shared-config.js"></script>\n</head>
 <body>
 <main class="app">
 <h1>Meal Planner</h1>
@@ -22,10 +22,55 @@
 <script>
 (function(){
 var DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],KEY="mealPlannerV3";
+var ENDPOINT=(window.MEAL_PLANNER_SHARED_ENDPOINT||"").trim();
+var remoteTimer=null;
+function jsonp(params,cb){
+  if(!ENDPOINT){ if(cb) cb(null); return; }
+  var name="mealcb_"+Date.now()+"_"+Math.floor(Math.random()*100000);
+  params.callback=name;
+  var s=document.createElement("script");
+  var q=Object.keys(params).map(function(k){return encodeURIComponent(k)+"="+encodeURIComponent(params[k])}).join("&");
+  window[name]=function(data){try{if(cb)cb(data)}finally{delete window[name];s.remove()}};
+  s.onerror=function(){delete window[name];s.remove();if(cb)cb(null)};
+  s.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+q;
+  document.head.appendChild(s);
+}
+function saveRemote(){
+  if(!ENDPOINT)return;
+  clearTimeout(remoteTimer);
+  remoteTimer=setTimeout(function(){
+    jsonp({action:"save",data:JSON.stringify(state)},function(){});
+  },350);
+}
+function loadRemote(){
+  if(!ENDPOINT)return;
+  jsonp({action:"load",ts:Date.now()},function(data){
+    if(!data||!data.ok||!data.plan)return;
+    state=normalize(data.plan);
+    try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
+    start.value=state.start;
+    document.getElementById("bm").value=state.breakfast.Molly;
+    document.getElementById("br").value=state.breakfast.Rob;
+    document.getElementById("sj").value=state.snack.Jonah;
+    render();
+  });
+}
+function normalize(p){
+  var s=blank();
+  s.start=DAYS.indexOf(p&&p.start)>=0?p.start:"Saturday";
+  DAYS.forEach(function(d){
+    s.meals[d].lunch=(p&&p.meals&&p.meals[d]&&p.meals[d].lunch)||"";
+    s.meals[d].dinner=(p&&p.meals&&p.meals[d]&&p.meals[d].dinner)||"";
+  });
+  s.breakfast.Molly=(p&&p.breakfast&&p.breakfast.Molly)||"";
+  s.breakfast.Rob=(p&&p.breakfast&&p.breakfast.Rob)||"";
+  s.snack.Jonah=(p&&p.snack&&p.snack.Jonah)||"";
+  return s;
+}
 var blank=function(){var m={};DAYS.forEach(function(d){m[d]={lunch:"",dinner:""}});return{start:"Saturday",meals:m,breakfast:{Molly:"",Rob:""},snack:{Jonah:""}}};
 var state=blank(),rows=document.getElementById("rows"),start=document.getElementById("start"),status=document.getElementById("status"),dlg=document.getElementById("dlg");
 try{var x=localStorage.getItem(KEY);if(x){var p=JSON.parse(x);state.start=DAYS.indexOf(p.start)>=0?p.start:"Saturday";DAYS.forEach(function(d){state.meals[d].lunch=(p.meals&&p.meals[d]&&p.meals[d].lunch)||"";state.meals[d].dinner=(p.meals&&p.meals[d]&&p.meals[d].dinner)||""});state.breakfast.Molly=(p.breakfast&&p.breakfast.Molly)||"";state.breakfast.Rob=(p.breakfast&&p.breakfast.Rob)||"";state.snack.Jonah=(p.snack&&p.snack.Jonah)||""}}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));status.textContent="Saved";setTimeout(function(){status.textContent=""},700)}catch(e){status.textContent="Saved for this session"}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));status.textContent=ENDPOINT?"Saved + syncing":"Saved";setTimeout(function(){status.textContent=""},900)}catch(e){status.textContent="Saved for this session"}saveRemote()}
 function order(){var i=DAYS.indexOf(state.start);return DAYS.slice(i).concat(DAYS.slice(0,i))}
 function grow(t){t.style.height="auto";t.style.height=Math.max(48,t.scrollHeight)+"px"}
 function btn(text,title,fn){var b=document.createElement("button");b.type="button";b.textContent=text;b.title=title;b.addEventListener("click",fn);return b}
