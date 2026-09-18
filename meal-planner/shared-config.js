@@ -1,0 +1,1 @@
+window.MEAL_PLANNER_SHARED_ENDPOINT = "";\n
