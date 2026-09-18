@@ -16,7 +16,7 @@
 <section class="table"><div class="row head"><div class="cell"></div><div class="cell">Lunch</div><div class="cell">Dinner</div></div><div id="rows"></div></section>
 <section class="table small"><div class="row head"><div class="cell"></div><div class="cell">Breakfast</div></div><div class="row"><div class="cell person">Molly</div><div class="cell"><textarea id="bm" placeholder="Add breakfast…"></textarea></div></div><div class="row"><div class="cell person">Rob</div><div class="cell"><textarea id="br" placeholder="Add breakfast…"></textarea></div></div></section>
 <section class="table small"><div class="row head"><div class="cell"></div><div class="cell">Snack</div></div><div class="row"><div class="cell person">Jonah</div><div class="cell"><textarea id="sj" placeholder="Add snack…"></textarea></div></div></section>
-<button id="clear" class="clear" type="button">Clear Week</button><div id="status" class="status"></div>
+<button id="clear" class="clear" type="button">Clear Week</button><button id="syncKeyBtn" class="clear" type="button" style="margin-top:8px;color:#4d5662;border-color:#d4d9df;background:#fff">Set Sync Key</button><div id="status" class="status"></div>
 </main>
 <dialog id="dlg"><h3>Clear the whole week?</h3><p>This removes every lunch, dinner, breakfast, and snack entry.</p><div class="dlg"><button id="cancel" class="cancel" type="button">Cancel</button><button id="confirm" class="confirm" type="button">Clear everything</button></div></dialog>
 <script>
@@ -35,11 +35,35 @@ function jsonp(params,cb){
   s.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+q;
   document.head.appendChild(s);
 }
+function getWriteKey(){try{return localStorage.getItem("mealPlannerWriteKey")||""}catch(e){return""}}
 function saveRemote(){
   if(!ENDPOINT)return;
   clearTimeout(remoteTimer);
   remoteTimer=setTimeout(function(){
-    jsonp({action:"save",data:JSON.stringify(state)},function(){});
+    var key=getWriteKey();
+    if(!key){status.textContent="Set Sync Key to sync";return}
+    var iframe=document.getElementById("syncTarget");
+    if(!iframe){
+      iframe=document.createElement("iframe");
+      iframe.name="syncTarget";
+      iframe.id="syncTarget";
+      iframe.style.display="none";
+      document.body.appendChild(iframe);
+    }
+    var form=document.createElement("form");
+    form.method="POST";
+    form.action=ENDPOINT;
+    form.target="syncTarget";
+    form.style.display="none";
+    [["writeKey",key],["data",JSON.stringify(state)]].forEach(function(pair){
+      var i=document.createElement("input");
+      i.type="hidden";i.name=pair[0];i.value=pair[1];form.appendChild(i);
+    });
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+    status.textContent="Synced";
+    setTimeout(function(){status.textContent=""},900);
   },350);
 }
 function loadRemote(){
@@ -86,6 +110,18 @@ document.getElementById("clear").addEventListener("click",function(){if(dlg.show
 document.getElementById("cancel").addEventListener("click",function(){dlg.close()});
 document.getElementById("confirm").addEventListener("click",function(){clearAll();dlg.close()});
 function clearAll(){state=blank();state.start=start.value;document.getElementById("bm").value="";document.getElementById("br").value="";document.getElementById("sj").value="";save();render()}
+document.getElementById("syncKeyBtn").addEventListener("click",function(){
+  var current=getWriteKey();
+  var key=prompt("Enter the private meal-planner sync key:",current);
+  if(key===null)return;
+  key=key.trim();
+  try{
+    if(key)localStorage.setItem("mealPlannerWriteKey",key);
+    else localStorage.removeItem("mealPlannerWriteKey");
+  }catch(e){}
+  status.textContent=key?"Sync key saved on this device":"Sync key removed";
+  setTimeout(function(){status.textContent=""},1200);
+});
 render();
 })();
 </script>
