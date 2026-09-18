@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f7f8">
+<title>Meal Planner</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f7f8;color:#1f2933;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.app{max-width:520px;margin:auto;padding:14px 10px 28px}h1{font-size:22px;margin:2px 0 14px}h2{font-size:16px;margin:18px 0 7px}.week{display:flex;align-items:center;gap:9px;margin-bottom:10px}.week label{font-size:14px;font-weight:600;white-space:nowrap}select{flex:1;min-height:44px;border:1px solid #cfd5dc;border-radius:8px;background:#fff;font-size:16px;padding:8px}.table{width:100%;border:1px solid #dfe3e8;border-radius:9px;overflow:hidden;background:#fff}.row{display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,1fr)}.row+.row{border-top:1px solid #dfe3e8}.cell{min-width:0;border-right:1px solid #dfe3e8}.cell:last-child{border-right:0}.head .cell{background:#f3f5f7;font-size:12px;font-weight:700;padding:8px 6px}.day{background:#fafbfc;font-size:12px;font-weight:650;padding:10px 6px}.meal{position:relative;min-height:78px;padding-bottom:31px}textarea{display:block;width:100%;min-height:48px;border:0;outline:0;resize:none;overflow:hidden;background:transparent;font:inherit;font-size:16px;line-height:1.3;padding:9px 7px}textarea::placeholder{color:#adb4bd}.copy{position:absolute;left:6px;right:6px;bottom:5px;display:flex;gap:5px;min-height:25px}.copy button{height:26px;min-width:38px;border:1px solid #cfd5dc;border-radius:6px;background:#f2f4f6;color:#4d5662;font-size:11px;font-weight:700}.small .row{grid-template-columns:82px minmax(0,1fr)}.person{background:#fafbfc;font-size:13px;font-weight:650;padding:11px 8px}.small textarea{min-height:48px}.clear{width:100%;min-height:46px;margin-top:18px;border:1px solid #f0c4bf;border-radius:9px;background:#fff5f4;color:#b42318;font-size:14px;font-weight:700}.status{text-align:center;color:#7b8490;font-size:11px;min-height:16px;margin-top:7px}dialog{width:calc(100% - 32px);max-width:360px;border:0;border-radius:12px;padding:18px}dialog::backdrop{background:rgba(0,0,0,.3)}dialog h3{margin:0 0 6px;font-size:17px}dialog p{font-size:14px;color:#59616c;line-height:1.4;margin:0 0 15px}.dlg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dlg button{min-height:44px;border-radius:8px;font-weight:700;font-size:14px}.cancel{border:1px solid #cfd5dc;background:#fff}.confirm{border:1px solid #b42318;background:#b42318;color:#fff}
+</style>
+</head>
+<body>
+<main class="app">
+<h1>Meal Planner</h1>
+<div class="week"><label for="start">Start week on:</label><select id="start"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option selected>Saturday</option><option>Sunday</option></select></div>
+<section class="table"><div class="row head"><div class="cell">Day</div><div class="cell">Lunch</div><div class="cell">Dinner</div></div><div id="rows"></div></section>
+<h2>Breakfast</h2>
+<section class="table small"><div class="row head"><div class="cell">Person</div><div class="cell">Breakfast</div></div><div class="row"><div class="cell person">Molly</div><div class="cell"><textarea id="bm" placeholder="Add breakfast…"></textarea></div></div><div class="row"><div class="cell person">Rob</div><div class="cell"><textarea id="br" placeholder="Add breakfast…"></textarea></div></div></section>
+<h2>Snack</h2>
+<section class="table small"><div class="row head"><div class="cell">Person</div><div class="cell">Snack</div></div><div class="row"><div class="cell person">Jonah</div><div class="cell"><textarea id="sj" placeholder="Add snack…"></textarea></div></div></section>
+<button id="clear" class="clear" type="button">Clear Week</button><div id="status" class="status"></div>
+</main>
+<dialog id="dlg"><h3>Clear the whole week?</h3><p>This removes every lunch, dinner, breakfast, and snack entry.</p><div class="dlg"><button id="cancel" class="cancel" type="button">Cancel</button><button id="confirm" class="confirm" type="button">Clear everything</button></div></dialog>
+<script>
+(function(){
+var DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],KEY="mealPlannerV3";
+var blank=function(){var m={};DAYS.forEach(function(d){m[d]={lunch:"",dinner:""}});return{start:"Saturday",meals:m,breakfast:{Molly:"",Rob:""},snack:{Jonah:""}}};
+var state=blank(),rows=document.getElementById("rows"),start=document.getElementById("start"),status=document.getElementById("status"),dlg=document.getElementById("dlg");
+try{var x=localStorage.getItem(KEY);if(x){var p=JSON.parse(x);state.start=DAYS.indexOf(p.start)>=0?p.start:"Saturday";DAYS.forEach(function(d){state.meals[d].lunch=(p.meals&&p.meals[d]&&p.meals[d].lunch)||"";state.meals[d].dinner=(p.meals&&p.meals[d]&&p.meals[d].dinner)||""});state.breakfast.Molly=(p.breakfast&&p.breakfast.Molly)||"";state.breakfast.Rob=(p.breakfast&&p.breakfast.Rob)||"";state.snack.Jonah=(p.snack&&p.snack.Jonah)||""}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));status.textContent="Saved";setTimeout(function(){status.textContent=""},700)}catch(e){status.textContent="Saved for this session"}}
+function order(){var i=DAYS.indexOf(state.start);return DAYS.slice(i).concat(DAYS.slice(0,i))}
+function grow(t){t.style.height="auto";t.style.height=Math.max(48,t.scrollHeight)+"px"}
+function btn(text,title,fn){var b=document.createElement("button");b.type="button";b.textContent=text;b.title=title;b.addEventListener("click",fn);return b}
+function mealCell(day,type,index,days){var c=document.createElement("div");c.className="cell meal";var t=document.createElement("textarea");t.placeholder="Add meal…";t.value=state.meals[day][type];t.setAttribute("aria-label",day+" "+type);t.addEventListener("input",function(){state.meals[day][type]=t.value;grow(t);updateCopies();save()});c.appendChild(t);var a=document.createElement("div");a.className="copy";a.dataset.day=day;a.dataset.type=type;a.dataset.index=index;c.appendChild(a);setTimeout(function(){grow(t)},0);return c}
+function render(){rows.innerHTML="";var days=order();days.forEach(function(day,i){var r=document.createElement("div");r.className="row";var d=document.createElement("div");d.className="cell day";d.textContent=day;r.appendChild(d);r.appendChild(mealCell(day,"lunch",i,days));r.appendChild(mealCell(day,"dinner",i,days));rows.appendChild(r)});updateCopies()}
+function updateCopies(){var days=order();document.querySelectorAll(".copy").forEach(function(a){a.innerHTML="";var i=Number(a.dataset.index);if(i>=6)return;var source=state.meals[a.dataset.day][a.dataset.type];if(!source.trim())return;var next=days[i+1];if(!state.meals[next].lunch.trim())a.appendChild(btn("+L","Copy to "+next+" lunch",function(){state.meals[next].lunch=source;save();render()}));if(!state.meals[next].dinner.trim())a.appendChild(btn("+D","Copy to "+next+" dinner",function(){state.meals[next].dinner=source;save();render()}))})}
+function bind(id,get,set){var t=document.getElementById(id);t.value=get();t.addEventListener("input",function(){set(t.value);grow(t);save()});setTimeout(function(){grow(t)},0)}
+bind("bm",function(){return state.breakfast.Molly},function(v){state.breakfast.Molly=v});
+bind("br",function(){return state.breakfast.Rob},function(v){state.breakfast.Rob=v});
+bind("sj",function(){return state.snack.Jonah},function(v){state.snack.Jonah=v});
+start.value=state.start;start.addEventListener("change",function(){state.start=start.value;save();render()});
+document.getElementById("clear").addEventListener("click",function(){if(dlg.showModal)dlg.showModal();else if(confirm("Clear the whole week?"))clearAll()});
+document.getElementById("cancel").addEventListener("click",function(){dlg.close()});
+document.getElementById("confirm").addEventListener("click",function(){clearAll();dlg.close()});
+function clearAll(){state=blank();state.start=start.value;document.getElementById("bm").value="";document.getElementById("br").value="";document.getElementById("sj").value="";save();render()}
+render();
+})();
+</script>
+</body>
+</html>
