@@ -1,27 +1,31 @@
-// Google Apps Script backend + DAKboard renderer for the Meal Planner.
-// Deploy as Web App: Execute as "Me"; access "Anyone".
-// Script Property required: MEAL_PLANNER_WRITE_KEY
+// Google Apps Script backend for the Meal Planner.
+// Phone writes securely to Apps Script.
+// Apps Script mirrors the latest plan to GitHub as meal-planner/plan.json.
+// DAKboard then reads plan.json from GitHub Pages, avoiding Google-session issues.
 //
-// Routes:
-//   /exec?view=dakboard   -> rendered DAKboard meal view
-//   /exec                -> JSON read of shared meal plan
-//   POST /exec           -> authenticated write from phone input page
+// Required Script Properties:
+//   MEAL_PLANNER_WRITE_KEY
+//   GITHUB_TOKEN
+//
+// GitHub token should be a fine-grained PAT limited to:
+//   Repository: schottelkotte-home/molly-dakboard
+//   Permission: Contents = Read and write
+//
+// Deploy as Web App: Execute as "Me"; access "Anyone".
 
 const PLAN_KEY = "MEAL_PLANNER_SHARED_STATE";
 const WRITE_KEY_PROP = "MEAL_PLANNER_WRITE_KEY";
+const GITHUB_TOKEN_PROP = "GITHUB_TOKEN";
+const GH_OWNER = "schottelkotte-home";
+const GH_REPO = "molly-dakboard";
+const GH_PATH = "meal-planner/plan.json";
+const GH_BRANCH = "main";
 
 function doGet(e) {
-  const view = ((e.parameter && e.parameter.view) || "").toLowerCase();
   const props = PropertiesService.getScriptProperties();
   const raw = props.getProperty(PLAN_KEY);
   let plan = null;
   try { plan = raw ? JSON.parse(raw) : null; } catch (err) {}
-
-  if (view === "dakboard") {
-    return HtmlService.createHtmlOutput(renderDakboard_(plan))
-      .setTitle("Meal Planner")
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
 
   return ContentService
     .createTextOutput(JSON.stringify({ ok: true, plan: plan }))
@@ -34,73 +38,72 @@ function doPost(e) {
   const suppliedKey = (e.parameter && e.parameter.writeKey) || "";
 
   if (!expectedKey || !constantTimeEqual_(expectedKey, suppliedKey)) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: "unauthorized" }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return json_({ ok: false, error: "unauthorized" });
   }
 
   try {
     const raw = (e.parameter && e.parameter.data) || "";
     const parsed = JSON.parse(raw);
+
+    // Keep a Google-side copy.
     props.setProperty(PLAN_KEY, JSON.stringify(parsed));
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
+
+    // Mirror the same plan to GitHub for the DAKboard to read.
+    const mirror = mirrorPlanToGitHub_(parsed);
+    return json_({ ok: mirror.ok, github: mirror });
   } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: "invalid_data" }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return json_({ ok: false, error: "invalid_data", detail: String(err) });
   }
 }
 
-function renderDakboard_(plan) {
-  const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-  const abbr = {Monday:"Mon",Tuesday:"Tue",Wednesday:"Wed",Thursday:"Thur",Friday:"Fri",Saturday:"Sat",Sunday:"Sun"};
-  const start = plan && days.indexOf(plan.start) >= 0 ? plan.start : "Saturday";
-  const startIndex = days.indexOf(start);
-  const ordered = days.slice(startIndex).concat(days.slice(0,startIndex));
+function mirrorPlanToGitHub_(plan) {
+  const token = PropertiesService.getScriptProperties().getProperty(GITHUB_TOKEN_PROP) || "";
+  if (!token) return { ok: false, error: "missing_github_token" };
 
-  const rows = ordered.map(function(day) {
-    const dinner = plan && plan.meals && plan.meals[day] ? String(plan.meals[day].dinner || "") : "";
-    return '<div class="row">' +
-      '<div class="day">' + esc_(abbr[day]) + '</div>' +
-      '<button type="button" class="meal" data-key="' + escAttr_(day + "-dinner") + '">' + esc_(dinner) + '</button>' +
-      '</div>';
-  }).join("");
+  const api = "https://api.github.com/repos/" + GH_OWNER + "/" + GH_REPO + "/contents/" + GH_PATH;
+  const headers = {
+    "Authorization": "Bearer " + token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
 
-  return '<!doctype html><html><head>' +
-    '<meta charset="utf-8">' +
-    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
-    '<meta http-equiv="refresh" content="60">' +
-    '<style>' +
-    '*{box-sizing:border-box}html,body{margin:0;background:transparent;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#252525}' +
-    '.board{width:100%;background:#fff;border-radius:14px;padding:14px 16px}' +
-    '.table{width:100%;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;background:#fff}' +
-    '.head,.row{display:grid;grid-template-columns:72px minmax(0,1fr)}' +
-    '.row{border-top:1px solid #e5e5e5}' +
-    '.head>div{background:#f4f4f4;color:#555;font-weight:800;font-size:28px;padding:10px 12px;text-align:center;border-right:1px solid #e5e5e5}' +
-    '.head>div:last-child{border-right:0}' +
-    '.day{background:#fafafa;color:#666;font-weight:800;font-size:30px;display:flex;align-items:center;justify-content:center;padding:10px 6px;border-right:1px solid #e5e5e5}' +
-    '.meal{min-width:0;min-height:90px;border:0;background:#fff;color:#252525;text-align:left;padding:16px 14px;font:inherit;font-size:56px;line-height:1.08;font-weight:750;white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer}' +
-    '.meal.done{background:#dedede;color:#777}' +
-    '.meal:empty{cursor:default}' +
-    '@media(max-width:600px){.board{padding:10px}.head,.row{grid-template-columns:58px minmax(0,1fr)}.meal{font-size:44px;min-height:78px;padding:12px 10px}.day{font-size:24px}.head>div{font-size:24px}}' +
-    '</style></head><body>' +
-    '<main class="board"><section class="table"><div class="head"><div></div><div>Dinner</div></div>' +
-    rows +
-    '</section></main>' +
-    '<script>(function(){var K="mealPlannerDakDoneV1",s={};try{s=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}' +
-    'document.querySelectorAll(".meal").forEach(function(b){var k=b.dataset.key;if(s[k])b.classList.add("done");b.addEventListener("click",function(){if(!b.textContent.trim())return;s[k]=!s[k];try{localStorage.setItem(K,JSON.stringify(s))}catch(e){}b.classList.toggle("done",!!s[k])})});})();<\/script>' +
-    '</body></html>';
+  let sha = null;
+  const existing = UrlFetchApp.fetch(api + "?ref=" + encodeURIComponent(GH_BRANCH), {
+    method: "get",
+    headers: headers,
+    muteHttpExceptions: true
+  });
+
+  if (existing.getResponseCode() === 200) {
+    try { sha = JSON.parse(existing.getContentText()).sha || null; } catch (err) {}
+  } else if (existing.getResponseCode() !== 404) {
+    return { ok: false, error: "github_read_failed", status: existing.getResponseCode() };
+  }
+
+  const payload = {
+    message: "Update shared meal plan",
+    content: Utilities.base64Encode(JSON.stringify(plan, null, 2)),
+    branch: GH_BRANCH
+  };
+  if (sha) payload.sha = sha;
+
+  const saved = UrlFetchApp.fetch(api, {
+    method: "put",
+    headers: headers,
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  const code = saved.getResponseCode();
+  if (code === 200 || code === 201) return { ok: true };
+  return { ok: false, error: "github_write_failed", status: code, body: saved.getContentText().slice(0,500) };
 }
 
-function esc_(value) {
-  return String(value == null ? "" : value)
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-
-function escAttr_(value) {
-  return esc_(value).replace(/"/g,"&quot;");
+function json_(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function constantTimeEqual_(a, b) {
