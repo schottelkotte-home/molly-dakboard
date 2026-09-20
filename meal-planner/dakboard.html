@@ -34,7 +34,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 <script src="shared-config.js"></script>
 </head>
 <body>
-<main class="board" aria-label="Meal planner DAKboard view">
+<main class="board" aria-label="Meal planner DAKboard view"><div id="syncStatus" style="font-size:16px;color:#777;margin:0 0 8px"></div>
   <section class="table">
     <div class="row head"><div class="cell"></div><div class="cell">Dinner</div></div>
     <div id="mealRows"></div>
@@ -65,9 +65,19 @@ function normalize(p){
   return s
 }
 function loadRemote(){
-  if(!ENDPOINT){render();return}
+  var syncStatus=document.getElementById("syncStatus");
+  if(!ENDPOINT){syncStatus.textContent="No shared endpoint configured";render();return}
+  syncStatus.textContent="Loading shared meals…";
   jsonp({action:"load",ts:Date.now()},function(data){
-    if(data&&data.ok&&data.plan){current=normalize(data.plan);try{localStorage.setItem(DATA_KEY,JSON.stringify(current))}catch(e){}}
+    if(data&&data.ok&&data.plan){
+      current=normalize(data.plan);
+      try{localStorage.setItem(DATA_KEY,JSON.stringify(current))}catch(e){}
+      syncStatus.textContent="Shared meals loaded";
+    }else if(data&&data.ok&&!data.plan){
+      syncStatus.textContent="Shared backend is reachable, but no meal plan has been saved yet";
+    }else{
+      syncStatus.textContent="Could not load shared meals";
+    }
     render()
   })
 }
