@@ -24,16 +24,28 @@
 var DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],KEY="mealPlannerV3";
 var ENDPOINT=(window.MEAL_PLANNER_SHARED_ENDPOINT||"").trim();
 var remoteTimer=null;
-function jsonp(params,cb){
-  if(!ENDPOINT){ if(cb) cb(null); return; }
-  var name="mealcb_"+Date.now()+"_"+Math.floor(Math.random()*100000);
-  params.callback=name;
-  var s=document.createElement("script");
-  var q=Object.keys(params).map(function(k){return encodeURIComponent(k)+"="+encodeURIComponent(params[k])}).join("&");
-  window[name]=function(data){try{if(cb)cb(data)}finally{delete window[name];s.remove()}};
-  s.onerror=function(){delete window[name];s.remove();if(cb)cb(null)};
-  s.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+q;
-  document.head.appendChild(s);
+function loadSharedViaFrame(cb){
+  if(!ENDPOINT){if(cb)cb(null);return}
+  var token="meal_"+Date.now()+"_"+Math.floor(Math.random()*100000);
+  var frame=document.createElement("iframe");
+  frame.style.display="none";
+  frame.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+"action=frame&token="+encodeURIComponent(token)+"&ts="+Date.now();
+  var finished=false;
+  function done(data){
+    if(finished)return;
+    finished=true;
+    window.removeEventListener("message",onMessage);
+    frame.remove();
+    if(cb)cb(data);
+  }
+  function onMessage(ev){
+    var d=ev.data;
+    if(!d||d.type!=="meal-planner-shared"||d.token!==token)return;
+    done(d.payload||null);
+  }
+  window.addEventListener("message",onMessage);
+  document.body.appendChild(frame);
+  setTimeout(function(){done(null)},8000);
 }
 function getWriteKey(){try{return localStorage.getItem("mealPlannerWriteKey")||""}catch(e){return""}}
 function saveRemote(){
@@ -68,7 +80,7 @@ function saveRemote(){
 }
 function loadRemote(){
   if(!ENDPOINT)return;
-  jsonp({action:"load",ts:Date.now()},function(data){
+  loadSharedViaFrame(function(data){
     if(!data||!data.ok||!data.plan)return;
     state=normalize(data.plan);
     try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
