@@ -46,31 +46,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 var DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 var ABBR={Monday:"Mon",Tuesday:"Tue",Wednesday:"Wed",Thursday:"Thur",Friday:"Fri",Saturday:"Sat",Sunday:"Sun"};
 var DATA_KEY="mealPlannerV3",CHECK_KEY="mealPlannerDakDoneV1";
-var ENDPOINT=(window.MEAL_PLANNER_SHARED_ENDPOINT||"").trim();
 var current=load();
-function loadSharedViaFrame(cb){
-  if(!ENDPOINT){if(cb)cb(null);return}
-  var token="meal_"+Date.now()+"_"+Math.floor(Math.random()*100000);
-  var frame=document.createElement("iframe");
-  frame.style.display="none";
-  frame.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+"action=frame&token="+encodeURIComponent(token)+"&ts="+Date.now();
-  var finished=false;
-  function done(data){
-    if(finished)return;
-    finished=true;
-    window.removeEventListener("message",onMessage);
-    frame.remove();
-    if(cb)cb(data);
-  }
-  function onMessage(ev){
-    var d=ev.data;
-    if(!d||d.type!=="meal-planner-shared"||d.token!==token)return;
-    done(d.payload||null);
-  }
-  window.addEventListener("message",onMessage);
-  document.body.appendChild(frame);
-  setTimeout(function(){done(null)},8000);
-}
+
 function normalize(p){
   var s=blank();
   s.start=DAYS.indexOf(p&&p.start)>=0?p.start:"Saturday";
@@ -80,20 +57,23 @@ function normalize(p){
 }
 function loadRemote(){
   var syncStatus=document.getElementById("syncStatus");
-  if(!ENDPOINT){syncStatus.textContent="No shared endpoint configured";render();return}
   syncStatus.textContent="Loading shared meals…";
-  loadSharedViaFrame(function(data){
-    if(data&&data.ok&&data.plan){
-      current=normalize(data.plan);
-      try{localStorage.setItem(DATA_KEY,JSON.stringify(current))}catch(e){}
-      syncStatus.textContent="Shared meals loaded";
-    }else if(data&&data.ok&&!data.plan){
-      syncStatus.textContent="Shared backend is reachable, but no meal plan has been saved yet";
-    }else{
+  fetch("plan.json?ts="+Date.now(),{cache:"no-store"})
+    .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})
+    .then(function(plan){
+      if(plan){
+        current=normalize(plan);
+        try{localStorage.setItem(DATA_KEY,JSON.stringify(current))}catch(e){}
+        syncStatus.textContent="Shared meals loaded";
+      }else{
+        syncStatus.textContent="No shared meal plan saved yet";
+      }
+      render();
+    })
+    .catch(function(){
       syncStatus.textContent="Could not load shared meals";
-    }
-    render()
-  })
+      render();
+    });
 }
 var checks={};
 try{checks=JSON.parse(localStorage.getItem(CHECK_KEY)||"{}")}catch(e){checks={}}
