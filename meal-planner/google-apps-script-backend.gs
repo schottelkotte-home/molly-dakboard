@@ -1,23 +1,33 @@
 // Google Apps Script backend for the Meal Planner.
-// Security model:
-// - GET is read-only and returns the current meal plan.
-// - POST is write-only and requires a private write key.
-// - Store the key in Script Properties as MEAL_PLANNER_WRITE_KEY.
+// GET action=frame returns a tiny HTML bridge that posts the shared plan to the parent page.
+// POST is write-only and requires a private write key.
+// Store the key in Script Properties as MEAL_PLANNER_WRITE_KEY.
 // Deploy as Web App: Execute as "Me"; access "Anyone".
 
 const PLAN_KEY = "MEAL_PLANNER_SHARED_STATE";
 const WRITE_KEY_PROP = "MEAL_PLANNER_WRITE_KEY";
 
 function doGet(e) {
-  const callback = sanitizeCallback_(e.parameter.callback || "callback");
-  const raw = PropertiesService.getScriptProperties().getProperty(PLAN_KEY);
+  const action = ((e.parameter && e.parameter.action) || "frame").toLowerCase();
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty(PLAN_KEY);
   let plan = null;
   try { plan = raw ? JSON.parse(raw) : null; } catch (err) {}
-  const result = { ok: true, plan: plan };
+
+  if (action === "frame") {
+    const token = String((e.parameter && e.parameter.token) || "");
+    const payload = JSON.stringify({ ok: true, plan: plan }).replace(/</g, "\\u003c");
+    const safeToken = JSON.stringify(token);
+    const html = '<!doctype html><meta charset="utf-8"><script>' +
+      'parent.postMessage({type:"meal-planner-shared",token:' + safeToken +
+      ',payload:' + payload + '},"*");<\/script>';
+    return HtmlService.createHtmlOutput(html)
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
 
   return ContentService
-    .createTextOutput(callback + "(" + JSON.stringify(result) + ");")
-    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    .createTextOutput(JSON.stringify({ ok: true, plan: plan }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
@@ -35,7 +45,6 @@ function doPost(e) {
     const raw = (e.parameter && e.parameter.data) || "";
     const parsed = JSON.parse(raw);
     props.setProperty(PLAN_KEY, JSON.stringify(parsed));
-
     return ContentService
       .createTextOutput(JSON.stringify({ ok: true }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -44,10 +53,6 @@ function doPost(e) {
       .createTextOutput(JSON.stringify({ ok: false, error: "invalid_data" }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-}
-
-function sanitizeCallback_(name) {
-  return /^[A-Za-z_$][0-9A-Za-z_$\.]*$/.test(name) ? name : "callback";
 }
 
 function constantTimeEqual_(a, b) {
