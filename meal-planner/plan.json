@@ -1,0 +1,40 @@
+{
+  "start": "Saturday",
+  "meals": {
+    "Monday": {
+      "lunch": "",
+      "dinner": ""
+    },
+    "Tuesday": {
+      "lunch": "",
+      "dinner": ""
+    },
+    "Wednesday": {
+      "lunch": "",
+      "dinner": ""
+    },
+    "Thursday": {
+      "lunch": "",
+      "dinner": ""
+    },
+    "Friday": {
+      "lunch": "",
+      "dinner": ""
+    },
+    "Saturday": {
+      "lunch": "",
+      "dinner": ""
+    },
+    "Sunday": {
+      "lunch": "",
+      "dinner": ""
+    }
+  },
+  "breakfast": {
+    "Molly": "",
+    "Rob": ""
+  },
+  "snack": {
+    "Jonah": ""
+  }
+}
