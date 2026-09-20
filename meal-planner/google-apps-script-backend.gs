@@ -1,15 +1,11 @@
 // Google Apps Script backend for the Meal Planner.
 // Phone writes securely to Apps Script.
 // Apps Script mirrors the latest plan to GitHub as meal-planner/plan.json.
-// DAKboard then reads plan.json from GitHub Pages, avoiding Google-session issues.
+// DAKboard reads plan.json from GitHub Pages.
 //
 // Required Script Properties:
 //   MEAL_PLANNER_WRITE_KEY
 //   GITHUB_TOKEN
-//
-// GitHub token should be a fine-grained PAT limited to:
-//   Repository: schottelkotte-home/molly-dakboard
-//   Permission: Contents = Read and write
 //
 // Deploy as Web App: Execute as "Me"; access "Anyone".
 
@@ -27,32 +23,42 @@ function doGet(e) {
   let plan = null;
   try { plan = raw ? JSON.parse(raw) : null; } catch (err) {}
 
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, plan: plan }))
-    .setMimeType(ContentService.MimeType.JSON);
+  const action = ((e.parameter && e.parameter.action) || "").toLowerCase();
+  if (action === "frame") {
+    const token = String((e.parameter && e.parameter.token) || "");
+    return postMessageHtml_("meal-planner-shared", token, { ok: true, plan: plan });
+  }
+
+  return json_({ ok: true, plan: plan });
 }
 
 function doPost(e) {
   const props = PropertiesService.getScriptProperties();
+  const token = String((e.parameter && e.parameter.token) || "");
   const expectedKey = props.getProperty(WRITE_KEY_PROP) || "";
   const suppliedKey = (e.parameter && e.parameter.writeKey) || "";
 
   if (!expectedKey || !constantTimeEqual_(expectedKey, suppliedKey)) {
-    return json_({ ok: false, error: "unauthorized" });
+    return postMessageHtml_("meal-planner-save", token, { ok: false, error: "unauthorized" });
   }
 
   try {
     const raw = (e.parameter && e.parameter.data) || "";
     const parsed = JSON.parse(raw);
-
-    // Keep a Google-side copy.
     props.setProperty(PLAN_KEY, JSON.stringify(parsed));
 
-    // Mirror the same plan to GitHub for the DAKboard to read.
     const mirror = mirrorPlanToGitHub_(parsed);
-    return json_({ ok: mirror.ok, github: mirror });
+    return postMessageHtml_("meal-planner-save", token, {
+      ok: mirror.ok,
+      error: mirror.ok ? null : "github_mirror_failed",
+      github: mirror
+    });
   } catch (err) {
-    return json_({ ok: false, error: "invalid_data", detail: String(err) });
+    return postMessageHtml_("meal-planner-save", token, {
+      ok: false,
+      error: "invalid_data",
+      detail: String(err)
+    });
   }
 }
 
@@ -97,7 +103,22 @@ function mirrorPlanToGitHub_(plan) {
 
   const code = saved.getResponseCode();
   if (code === 200 || code === 201) return { ok: true };
-  return { ok: false, error: "github_write_failed", status: code, body: saved.getContentText().slice(0,500) };
+  return {
+    ok: false,
+    error: "github_write_failed",
+    status: code,
+    body: saved.getContentText().slice(0,500)
+  };
+}
+
+function postMessageHtml_(type, token, payload) {
+  const safeType = JSON.stringify(String(type || ""));
+  const safeToken = JSON.stringify(String(token || ""));
+  const safePayload = JSON.stringify(payload).replace(/</g, "\\u003c");
+  const html = '<!doctype html><meta charset="utf-8"><script>' +
+    'parent.postMessage({type:' + safeType + ',token:' + safeToken + ',payload:' + safePayload + '},"*");<\/script>';
+  return HtmlService.createHtmlOutput(html)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 function json_(obj) {
