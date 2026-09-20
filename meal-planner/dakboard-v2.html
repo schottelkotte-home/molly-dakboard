@@ -48,14 +48,28 @@ var ABBR={Monday:"Mon",Tuesday:"Tue",Wednesday:"Wed",Thursday:"Thur",Friday:"Fri
 var DATA_KEY="mealPlannerV3",CHECK_KEY="mealPlannerDakDoneV1";
 var ENDPOINT=(window.MEAL_PLANNER_SHARED_ENDPOINT||"").trim();
 var current=load();
-function jsonp(params,cb){
+function loadSharedViaFrame(cb){
   if(!ENDPOINT){if(cb)cb(null);return}
-  var name="mealcb_"+Date.now()+"_"+Math.floor(Math.random()*100000),s=document.createElement("script");
-  params.callback=name;
-  var q=Object.keys(params).map(function(k){return encodeURIComponent(k)+"="+encodeURIComponent(params[k])}).join("&");
-  window[name]=function(data){try{if(cb)cb(data)}finally{delete window[name];s.remove()}};
-  s.onerror=function(){delete window[name];s.remove();if(cb)cb(null)};
-  s.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+q;document.head.appendChild(s)
+  var token="meal_"+Date.now()+"_"+Math.floor(Math.random()*100000);
+  var frame=document.createElement("iframe");
+  frame.style.display="none";
+  frame.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+"action=frame&token="+encodeURIComponent(token)+"&ts="+Date.now();
+  var finished=false;
+  function done(data){
+    if(finished)return;
+    finished=true;
+    window.removeEventListener("message",onMessage);
+    frame.remove();
+    if(cb)cb(data);
+  }
+  function onMessage(ev){
+    var d=ev.data;
+    if(!d||d.type!=="meal-planner-shared"||d.token!==token)return;
+    done(d.payload||null);
+  }
+  window.addEventListener("message",onMessage);
+  document.body.appendChild(frame);
+  setTimeout(function(){done(null)},8000);
 }
 function normalize(p){
   var s=blank();
@@ -68,7 +82,7 @@ function loadRemote(){
   var syncStatus=document.getElementById("syncStatus");
   if(!ENDPOINT){syncStatus.textContent="No shared endpoint configured";render();return}
   syncStatus.textContent="Loading shared meals…";
-  jsonp({action:"load",ts:Date.now()},function(data){
+  loadSharedViaFrame(function(data){
     if(data&&data.ok&&data.plan){
       current=normalize(data.plan);
       try{localStorage.setItem(DATA_KEY,JSON.stringify(current))}catch(e){}
