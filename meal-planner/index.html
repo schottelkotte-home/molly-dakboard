@@ -54,6 +54,8 @@ function saveRemote(){
   remoteTimer=setTimeout(function(){
     var key=getWriteKey();
     if(!key){status.textContent="Set Sync Key to sync";return}
+
+    var token="save_"+Date.now()+"_"+Math.floor(Math.random()*100000);
     var iframe=document.getElementById("syncTarget");
     if(!iframe){
       iframe=document.createElement("iframe");
@@ -62,20 +64,47 @@ function saveRemote(){
       iframe.style.display="none";
       document.body.appendChild(iframe);
     }
+
+    var finished=false;
+    function cleanup(){
+      window.removeEventListener("message",onMessage);
+      clearTimeout(timeout);
+    }
+    function onMessage(ev){
+      var d=ev.data;
+      if(!d||d.type!=="meal-planner-save"||d.token!==token)return;
+      finished=true;
+      cleanup();
+      if(d.payload&&d.payload.ok){
+        status.textContent="Synced";
+        setTimeout(function(){if(status.textContent==="Synced")status.textContent=""},1200);
+      }else{
+        var err=(d.payload&&d.payload.error)||"save_failed";
+        var detail=(d.payload&&d.payload.github&&d.payload.github.error)||"";
+        status.textContent="Sync failed: "+err+(detail?" / "+detail:"");
+      }
+    }
+    window.addEventListener("message",onMessage);
+
     var form=document.createElement("form");
     form.method="POST";
     form.action=ENDPOINT;
     form.target="syncTarget";
     form.style.display="none";
-    [["writeKey",key],["data",JSON.stringify(state)]].forEach(function(pair){
+    [["writeKey",key],["data",JSON.stringify(state)],["token",token]].forEach(function(pair){
       var i=document.createElement("input");
       i.type="hidden";i.name=pair[0];i.value=pair[1];form.appendChild(i);
     });
     document.body.appendChild(form);
+    status.textContent="Syncing…";
     form.submit();
     form.remove();
-    status.textContent="Synced";
-    setTimeout(function(){status.textContent=""},900);
+
+    var timeout=setTimeout(function(){
+      if(finished)return;
+      window.removeEventListener("message",onMessage);
+      status.textContent="Sync failed: no response";
+    },10000);
   },350);
 }
 function loadRemote(){
