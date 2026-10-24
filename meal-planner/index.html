@@ -16,6 +16,7 @@
 <section class="table"><div class="row head"><div class="cell"></div><div class="cell">Lunch</div><div class="cell">Dinner</div></div><div id="rows"></div></section>
 <section class="table small"><div class="row head"><div class="cell"></div><div class="cell">Breakfast</div></div><div class="row"><div class="cell person">Molly</div><div class="cell"><textarea id="bm" placeholder="Add breakfast…"></textarea></div></div><div class="row"><div class="cell person">Rob</div><div class="cell"><textarea id="br" placeholder="Add breakfast…"></textarea></div></div></section>
 <section class="table small"><div class="row head"><div class="cell"></div><div class="cell">Snack</div></div><div class="row"><div class="cell person">Jonah</div><div class="cell"><textarea id="sj" placeholder="Add snack…"></textarea></div></div></section>
+<button id="backup" class="clear" type="button" style="margin-top:12px;color:#245473;border-color:#cbdce9;background:#f5faff">Download Meal Plan Backup</button>
 <button id="clear" class="clear" type="button">Clear Week</button><button id="syncKeyBtn" class="clear" type="button" style="margin-top:8px;color:#4d5662;border-color:#d4d9df;background:#fff">Set Sync Key</button><div id="status" class="status"></div>
 </main>
 <dialog id="dlg"><h3>Clear the whole week?</h3><p>This removes every lunch, dinner, breakfast, and snack entry.</p><div class="dlg"><button id="cancel" class="cancel" type="button">Cancel</button><button id="confirm" class="confirm" type="button">Clear everything</button></div></dialog>
@@ -162,6 +163,19 @@ document.getElementById("syncKeyBtn").addEventListener("click",function(){
   }catch(e){}
   status.textContent=key?"Sync key saved on this device":"Sync key removed";
   setTimeout(function(){status.textContent=""},1200);
+});
+document.getElementById("backup").addEventListener("click",function(){
+  var data=JSON.stringify(state,null,2);
+  var blob=new Blob([data],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");
+  a.href=url;
+  a.download="meal-plan-backup.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},1000);
+  status.textContent="Backup download started";
 });
 render();
 })();
