@@ -3,19 +3,19 @@
   "meals": {
     "Monday": {
       "lunch": "",
-      "dinner": "Enchiladas "
+      "dinner": "Enchiladas"
     },
     "Tuesday": {
       "lunch": "",
       "dinner": "Salmon"
     },
     "Wednesday": {
-      "lunch": "Salmon",
+      "lunch": "",
       "dinner": "Poke bowl"
     },
     "Thursday": {
       "lunch": "",
-      "dinner": "(Date night) "
+      "dinner": "(Date night)"
     },
     "Friday": {
       "lunch": "Zzz",
@@ -23,15 +23,15 @@
     },
     "Saturday": {
       "lunch": "",
-      "dinner": "Grill from Reddens TEST. "
+      "dinner": "Grill from Reddens"
     },
     "Sunday": {
       "lunch": "Aaa",
-      "dinner": "Enchiladas "
+      "dinner": "Enchiladas"
     }
   },
   "breakfast": {
-    "Molly": "Bk",
+    "Molly": "",
     "Rob": ""
   },
   "snack": {
