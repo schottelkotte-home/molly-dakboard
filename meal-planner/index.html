@@ -8,7 +8,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f7f7f8;color:#1f2933;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.app{max-width:520px;margin:auto;padding:14px 10px 28px}h1{font-size:22px;margin:2px 0 14px}h2{font-size:16px;margin:18px 0 7px}.week{display:flex;align-items:center;gap:9px;margin-bottom:10px}.week label{font-size:14px;font-weight:600;white-space:nowrap}select{flex:1;min-height:44px;border:1px solid #cfd5dc;border-radius:8px;background:#fff;font-size:16px;padding:8px}.table{width:100%;border:1px solid #dfe3e8;border-radius:9px;overflow:hidden;background:#fff}.row{display:grid;grid-template-columns:54px minmax(0,1fr) minmax(0,1fr)}.row+.row{border-top:1px solid #dfe3e8}.cell{min-width:0;border-right:1px solid #dfe3e8}.cell:last-child{border-right:0}.head .cell{background:#f3f5f7;font-size:12px;font-weight:700;padding:8px 6px}.day{background:#fafbfc;font-size:12px;font-weight:650;padding:10px 6px}.meal{position:relative;min-height:78px;padding-bottom:31px}textarea{display:block;width:100%;min-height:48px;border:0;outline:0;resize:none;overflow:hidden;background:transparent;font:inherit;font-size:16px;line-height:1.3;padding:9px 7px}textarea::placeholder{color:#adb4bd}.copy{position:absolute;left:6px;right:6px;bottom:5px;display:flex;gap:0;min-height:28px;border:1px solid #cfd5dc;border-radius:999px;overflow:hidden;background:#f2f4f6}.copy:empty{display:none}.copy button{flex:1;height:28px;min-width:0;border:0;border-right:1px solid #cfd5dc;border-radius:0;background:transparent;color:#4d5662;font-size:11px;font-weight:700}.copy button:last-child{border-right:0}.small .row{grid-template-columns:54px minmax(0,1fr)}.person{background:#fafbfc;font-size:13px;font-weight:650;padding:11px 8px}.small textarea{min-height:48px}.clear{width:100%;min-height:46px;margin-top:18px;border:1px solid #f0c4bf;border-radius:9px;background:#fff5f4;color:#b42318;font-size:14px;font-weight:700}.status{text-align:center;color:#7b8490;font-size:11px;min-height:16px;margin-top:7px}dialog{width:calc(100% - 32px);max-width:360px;border:0;border-radius:12px;padding:18px}dialog::backdrop{background:rgba(0,0,0,.3)}dialog h3{margin:0 0 6px;font-size:17px}dialog p{font-size:14px;color:#59616c;line-height:1.4;margin:0 0 15px}.dlg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dlg button{min-height:44px;border-radius:8px;font-weight:700;font-size:14px}.cancel{border:1px solid #cfd5dc;background:#fff}.confirm{border:1px solid #b42318;background:#b42318;color:#fff}
 </style>
-<script src="shared-config.js"></script>\n</head>
+</head>
 <body>
 <main class="app">
 <h1>Meal Planner</h1>
@@ -16,127 +16,17 @@
 <section class="table"><div class="row head"><div class="cell"></div><div class="cell">Lunch</div><div class="cell">Dinner</div></div><div id="rows"></div></section>
 <section class="table small"><div class="row head"><div class="cell"></div><div class="cell">Breakfast</div></div><div class="row"><div class="cell person">Molly</div><div class="cell"><textarea id="bm" placeholder="Add breakfast…"></textarea></div></div><div class="row"><div class="cell person">Rob</div><div class="cell"><textarea id="br" placeholder="Add breakfast…"></textarea></div></div></section>
 <section class="table small"><div class="row head"><div class="cell"></div><div class="cell">Snack</div></div><div class="row"><div class="cell person">Jonah</div><div class="cell"><textarea id="sj" placeholder="Add snack…"></textarea></div></div></section>
-<button id="backup" class="clear" type="button" style="margin-top:12px;color:#245473;border-color:#cbdce9;background:#f5faff">Download Meal Plan Backup</button>
-<button id="clear" class="clear" type="button">Clear Week</button><button id="syncKeyBtn" class="clear" type="button" style="margin-top:8px;color:#4d5662;border-color:#d4d9df;background:#fff">Set Sync Key</button><div id="status" class="status"></div>
+<button id="backup" class="clear" type="button" style="margin-top:12px;color:#245473;border-color:#cbdce9;background:#f5faff">Export for DAKboard</button>
+<button id="clear" class="clear" type="button">Clear Week</button><div id="status" class="status"></div>
 </main>
 <dialog id="dlg"><h3>Clear the whole week?</h3><p>This removes every lunch, dinner, breakfast, and snack entry.</p><div class="dlg"><button id="cancel" class="cancel" type="button">Cancel</button><button id="confirm" class="confirm" type="button">Clear everything</button></div></dialog>
 <script>
 (function(){
 var DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],KEY="mealPlannerV3";
-var ENDPOINT=(window.MEAL_PLANNER_SHARED_ENDPOINT||"").trim();
-var remoteTimer=null;
-function loadSharedViaFrame(cb){
-  if(!ENDPOINT){if(cb)cb(null);return}
-  var token="meal_"+Date.now()+"_"+Math.floor(Math.random()*100000);
-  var frame=document.createElement("iframe");
-  frame.style.display="none";
-  frame.src=ENDPOINT+(ENDPOINT.indexOf("?")>=0?"&":"?")+"action=frame&token="+encodeURIComponent(token)+"&ts="+Date.now();
-  var finished=false;
-  function done(data){
-    if(finished)return;
-    finished=true;
-    window.removeEventListener("message",onMessage);
-    frame.remove();
-    if(cb)cb(data);
-  }
-  function onMessage(ev){
-    var d=ev.data;
-    if(!d||d.type!=="meal-planner-shared"||d.token!==token)return;
-    done(d.payload||null);
-  }
-  window.addEventListener("message",onMessage);
-  document.body.appendChild(frame);
-  setTimeout(function(){done(null)},8000);
-}
-function getWriteKey(){try{return localStorage.getItem("mealPlannerWriteKey")||""}catch(e){return""}}
-function saveRemote(){
-  if(!ENDPOINT)return;
-  clearTimeout(remoteTimer);
-  remoteTimer=setTimeout(function(){
-    var key=getWriteKey();
-    if(!key){status.textContent="Set Sync Key to sync";return}
-
-    var token="save_"+Date.now()+"_"+Math.floor(Math.random()*100000);
-    var iframe=document.getElementById("syncTarget");
-    if(!iframe){
-      iframe=document.createElement("iframe");
-      iframe.name="syncTarget";
-      iframe.id="syncTarget";
-      iframe.style.display="none";
-      document.body.appendChild(iframe);
-    }
-
-    var finished=false;
-    function cleanup(){
-      window.removeEventListener("message",onMessage);
-      clearTimeout(timeout);
-    }
-    function onMessage(ev){
-      var d=ev.data;
-      if(!d||d.type!=="meal-planner-save"||d.token!==token)return;
-      finished=true;
-      cleanup();
-      if(d.payload&&d.payload.ok){
-        status.textContent="Synced";
-        setTimeout(function(){if(status.textContent==="Synced")status.textContent=""},1200);
-      }else{
-        var err=(d.payload&&d.payload.error)||"save_failed";
-        var detail=(d.payload&&d.payload.github&&d.payload.github.error)||"";
-        status.textContent="Sync failed: "+err+(detail?" / "+detail:"");
-      }
-    }
-    window.addEventListener("message",onMessage);
-
-    var form=document.createElement("form");
-    form.method="POST";
-    form.action=ENDPOINT;
-    form.target="syncTarget";
-    form.style.display="none";
-    [["writeKey",key],["data",JSON.stringify(state)],["token",token]].forEach(function(pair){
-      var i=document.createElement("input");
-      i.type="hidden";i.name=pair[0];i.value=pair[1];form.appendChild(i);
-    });
-    document.body.appendChild(form);
-    status.textContent="Syncing…";
-    form.submit();
-    form.remove();
-
-    var timeout=setTimeout(function(){
-      if(finished)return;
-      window.removeEventListener("message",onMessage);
-      status.textContent="Sync failed: no response";
-    },10000);
-  },350);
-}
-function loadRemote(){
-  if(!ENDPOINT)return;
-  loadSharedViaFrame(function(data){
-    if(!data||!data.ok||!data.plan)return;
-    state=normalize(data.plan);
-    try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}
-    start.value=state.start;
-    document.getElementById("bm").value=state.breakfast.Molly;
-    document.getElementById("br").value=state.breakfast.Rob;
-    document.getElementById("sj").value=state.snack.Jonah;
-    render();
-  });
-}
-function normalize(p){
-  var s=blank();
-  s.start=DAYS.indexOf(p&&p.start)>=0?p.start:"Saturday";
-  DAYS.forEach(function(d){
-    s.meals[d].lunch=(p&&p.meals&&p.meals[d]&&p.meals[d].lunch)||"";
-    s.meals[d].dinner=(p&&p.meals&&p.meals[d]&&p.meals[d].dinner)||"";
-  });
-  s.breakfast.Molly=(p&&p.breakfast&&p.breakfast.Molly)||"";
-  s.breakfast.Rob=(p&&p.breakfast&&p.breakfast.Rob)||"";
-  s.snack.Jonah=(p&&p.snack&&p.snack.Jonah)||"";
-  return s;
-}
 var blank=function(){var m={};DAYS.forEach(function(d){m[d]={lunch:"",dinner:""}});return{start:"Saturday",meals:m,breakfast:{Molly:"",Rob:""},snack:{Jonah:""}}};
 var state=blank(),rows=document.getElementById("rows"),start=document.getElementById("start"),status=document.getElementById("status"),dlg=document.getElementById("dlg");
 try{var x=localStorage.getItem(KEY);if(x){var p=JSON.parse(x);state.start=DAYS.indexOf(p.start)>=0?p.start:"Saturday";DAYS.forEach(function(d){state.meals[d].lunch=(p.meals&&p.meals[d]&&p.meals[d].lunch)||"";state.meals[d].dinner=(p.meals&&p.meals[d]&&p.meals[d].dinner)||""});state.breakfast.Molly=(p.breakfast&&p.breakfast.Molly)||"";state.breakfast.Rob=(p.breakfast&&p.breakfast.Rob)||"";state.snack.Jonah=(p.snack&&p.snack.Jonah)||""}}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));status.textContent=ENDPOINT?"Saved + syncing":"Saved";setTimeout(function(){status.textContent=""},900)}catch(e){status.textContent="Saved for this session"}saveRemote()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));status.textContent="Saved on this device";setTimeout(function(){if(status.textContent==="Saved on this device")status.textContent=""},1200)}catch(e){status.textContent="Saved for this session"}}
 function order(){var i=DAYS.indexOf(state.start);return DAYS.slice(i).concat(DAYS.slice(0,i))}
 function grow(t){t.style.height="auto";t.style.height=Math.max(48,t.scrollHeight)+"px"}
 function btn(text,title,fn){var b=document.createElement("button");b.type="button";b.textContent=text;b.title=title;b.addEventListener("click",fn);return b}
@@ -152,30 +42,18 @@ document.getElementById("clear").addEventListener("click",function(){if(dlg.show
 document.getElementById("cancel").addEventListener("click",function(){dlg.close()});
 document.getElementById("confirm").addEventListener("click",function(){clearAll();dlg.close()});
 function clearAll(){state=blank();state.start=start.value;document.getElementById("bm").value="";document.getElementById("br").value="";document.getElementById("sj").value="";save();render()}
-document.getElementById("syncKeyBtn").addEventListener("click",function(){
-  var current=getWriteKey();
-  var key=prompt("Enter the private meal-planner sync key:",current);
-  if(key===null)return;
-  key=key.trim();
-  try{
-    if(key)localStorage.setItem("mealPlannerWriteKey",key);
-    else localStorage.removeItem("mealPlannerWriteKey");
-  }catch(e){}
-  status.textContent=key?"Sync key saved on this device":"Sync key removed";
-  setTimeout(function(){status.textContent=""},1200);
-});
 document.getElementById("backup").addEventListener("click",function(){
   var data=JSON.stringify(state,null,2);
   var blob=new Blob([data],{type:"application/json"});
   var url=URL.createObjectURL(blob);
   var a=document.createElement("a");
   a.href=url;
-  a.download="meal-plan-backup.json";
+  a.download="plan.json";
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(function(){URL.revokeObjectURL(url)},1000);
-  status.textContent="Backup download started";
+  status.textContent="Meal plan export downloaded";
 });
 render();
 })();
