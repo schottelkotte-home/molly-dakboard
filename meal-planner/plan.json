@@ -3,38 +3,38 @@
   "meals": {
     "Monday": {
       "lunch": "",
-      "dinner": "Enchiladas"
+      "dinner": "(Nene+)"
     },
     "Tuesday": {
       "lunch": "",
-      "dinner": "Salmon"
+      "dinner": "Thanksgiving Meatballs"
     },
     "Wednesday": {
       "lunch": "",
-      "dinner": "Poke bowl"
+      "dinner": "Japanese Curry"
     },
     "Thursday": {
       "lunch": "",
-      "dinner": "(Date night)"
+      "dinner": "(Date Night)"
     },
     "Friday": {
-      "lunch": "Zzz",
-      "dinner": "Pizza"
+      "lunch": "",
+      "dinner": "(Pizza)"
     },
     "Saturday": {
       "lunch": "",
-      "dinner": "Grill from Reddens"
+      "dinner": "(Halloween)"
     },
     "Sunday": {
-      "lunch": "Aaa",
-      "dinner": "Enchiladas"
+      "lunch": "",
+      "dinner": "Thanksgiving Meatballs"
     }
   },
   "breakfast": {
-    "Molly": "",
-    "Rob": ""
+    "Molly": "PB Tortilla",
+    "Rob": "Yogurt & Granola"
   },
   "snack": {
-    "Jonah": ""
+    "Jonah": "Made Goods"
   }
 }
