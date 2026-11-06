@@ -3,31 +3,31 @@
   "meals": {
     "Monday": {
       "lunch": "",
-      "dinner": "(Nene+)"
+      "dinner": "Pork tenderloin\nBroccoli, rice"
     },
     "Tuesday": {
       "lunch": "",
-      "dinner": "Thanksgiving Meatballs"
+      "dinner": "Pork tenderloin\nBroccoli, rice"
     },
     "Wednesday": {
       "lunch": "",
-      "dinner": "Japanese Curry"
+      "dinner": "Fish and veggie"
     },
     "Thursday": {
       "lunch": "",
-      "dinner": "(Date Night)"
+      "dinner": "Out"
     },
     "Friday": {
       "lunch": "",
-      "dinner": "(Pizza)"
+      "dinner": "Pizza"
     },
     "Saturday": {
       "lunch": "",
-      "dinner": "(Halloween)"
+      "dinner": "Chicken tacos"
     },
     "Sunday": {
       "lunch": "",
-      "dinner": "Thanksgiving Meatballs"
+      "dinner": "Quesadilla"
     }
   },
   "breakfast": {
