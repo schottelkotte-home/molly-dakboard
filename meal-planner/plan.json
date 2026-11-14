@@ -2,39 +2,39 @@
   "start": "Saturday",
   "meals": {
     "Monday": {
-      "lunch": "",
-      "dinner": "Pork tenderloin\nBroccoli, rice"
+      "lunch": "Sausages, beans, greens",
+      "dinner": "Nene+"
     },
     "Tuesday": {
-      "lunch": "",
-      "dinner": "Pork tenderloin\nBroccoli, rice"
+      "lunch": "Sausages, beans, greens",
+      "dinner": "Beef stir Fry"
     },
     "Wednesday": {
-      "lunch": "",
-      "dinner": "Fish and veggie"
+      "lunch": "Butter chicken",
+      "dinner": "Beef stir fry Wraps"
     },
     "Thursday": {
-      "lunch": "",
+      "lunch": "Butter chicken",
       "dinner": "Out"
     },
     "Friday": {
-      "lunch": "",
-      "dinner": "Pizza"
+      "lunch": "Butter chicken",
+      "dinner": "Leftovers"
     },
     "Saturday": {
       "lunch": "",
-      "dinner": "Chicken tacos"
+      "dinner": "Pork chops and potatoes"
     },
     "Sunday": {
-      "lunch": "",
-      "dinner": "Quesadilla"
+      "lunch": "Sausages, beans, greens",
+      "dinner": "WBB"
     }
   },
   "breakfast": {
-    "Molly": "PB Tortilla",
-    "Rob": "Yogurt & Granola"
+    "Molly": "",
+    "Rob": ""
   },
   "snack": {
-    "Jonah": "Made Goods"
+    "Jonah": ""
   }
 }
