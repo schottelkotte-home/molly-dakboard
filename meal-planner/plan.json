@@ -2,32 +2,32 @@
   "start": "Saturday",
   "meals": {
     "Monday": {
-      "lunch": "Sausages, beans, greens",
-      "dinner": "Nene+"
+      "lunch": "Indian",
+      "dinner": "Gorton’s & Broccoli"
     },
     "Tuesday": {
-      "lunch": "Sausages, beans, greens",
-      "dinner": "Beef stir Fry"
+      "lunch": "",
+      "dinner": "Ball Party"
     },
     "Wednesday": {
-      "lunch": "Butter chicken",
-      "dinner": "Beef stir fry Wraps"
+      "lunch": "",
+      "dinner": "Quesadilla"
     },
     "Thursday": {
-      "lunch": "Butter chicken",
-      "dinner": "Out"
+      "lunch": "",
+      "dinner": "Thanksgiving"
     },
     "Friday": {
-      "lunch": "Butter chicken",
+      "lunch": "",
       "dinner": "Leftovers"
     },
     "Saturday": {
       "lunch": "",
-      "dinner": "Pork chops and potatoes"
+      "dinner": "Volcano & Nuggs"
     },
     "Sunday": {
-      "lunch": "Sausages, beans, greens",
-      "dinner": "WBB"
+      "lunch": "Indian",
+      "dinner": "Grilled BBQ Chicken"
     }
   },
   "breakfast": {
